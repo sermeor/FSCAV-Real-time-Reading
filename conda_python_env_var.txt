@@ -1,0 +1,9 @@
+C:\Users\sergi\anaconda3\
+
+C:\Users\sergi\anaconda3\Library\bin
+
+C:\Users\sergi\anaconda3\Scripts
+
+C:\Users\sergi\anaconda3\Library
+
+C:\Users\sergi\anaconda3\Library\mingw-w64\bin
