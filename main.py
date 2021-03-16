@@ -7,6 +7,14 @@ import os
 from scipy.signal import find_peaks
 from scipy.integrate import simps
 #Serial connection class
+
+
+def start_application():
+    global read_real_time
+    read_real_time = read_real_time = HL_FSCAV_REAL_TIME()
+    read_real_time.master.mainloop()
+
+
 class HL_FSCAV_REAL_TIME:
     def __init__(self):
         #Definition of app window.
@@ -48,11 +56,10 @@ class HL_FSCAV_REAL_TIME:
 
         tk.Label(self.control_frame, text="Control Panel", font=(None, 15), anchor="e", bg='gray').grid(row=0, column=0, columnspan=2)
 
-
         self.start_button = self.get_button_object(self.control_frame, self.start_reading_signals, 2, 10, 'Start', [5,0,1,2,0,0])
         self.stop_button = self.get_button_object(self.control_frame, self.stop_reading_signals, 2, 10, 'Stop', [5,2,1,2,0,0])
         self.save_charge_button = self.get_button_object(self.control_frame, self.save_charge, 2, 10, 'Save Charge', [6,0,1,2,0,0])
-        self.reset_files_button = self.get_button_object(self.control_frame, self.reset_files, 2, 10, 'Reset', [6,2,1,2,0,0])
+        self.reset_files_button = self.get_button_object(self.control_frame, self.reset_files, 2, 10, 'Reset Charge', [6,2,1,2,0,0])
         self.previous_button = self.get_button_object(self.control_frame, self.previous_button_pushed, 2, 5, '<', [7,0,1,1,10,10])
         self.file_label = tk.Label(self.control_frame, text=" ", bg="gray")
         self.file_label.grid(row=7,column=1)
@@ -66,6 +73,14 @@ class HL_FSCAV_REAL_TIME:
 
         self.charge_figure = self.generate_figure(self.master, [4,2], 100, [0,1,1,1,10,10], self.charge_array, 'tab:blue', 'Charge (nA·s)', 'Samples', 10)
         self.cvs_figure = self.generate_figure(self.master, [4,2], 100, [1,1,1,1,10,10], self.charge_array, 'tab:blue', 'Current (nA)', 'Time (s)', 10)
+
+        #Menu
+        self.menubar = tk.Menu(self.master)
+        self.filemenu = tk.Menu(self.menubar, tearoff=0)
+        self.filemenu.add_command(label="Reset Application", command=self.reset_application)
+        self.filemenu.add_command(label="Exit", command=self.master.destroy)
+        self.menubar.add_cascade(label="File", menu=self.filemenu)
+        self.master.config(menu=self.menubar)
 
     def get_input_object(self, macro, label_name, color, label_position, input_position, default_value):
         tk.Label(macro, text=label_name, bg=color).grid(row=label_position[0], column=label_position[1],
@@ -252,7 +267,9 @@ class HL_FSCAV_REAL_TIME:
         self.cvs_figure[4].draw()
         self.cvs_figure[4].flush_events()
 
+    def reset_application(self):
+        self.master.destroy()
+        start_application()
 
-read_real_time = HL_FSCAV_REAL_TIME()
-# run the gui
-read_real_time.master.mainloop()
+
+start_application()
