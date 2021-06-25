@@ -6,6 +6,7 @@ import numpy as np
 import os
 from scipy.signal import find_peaks
 from scipy.integrate import simps
+from scipy.optimize import curve_fit
 #Serial connection class
 
 
@@ -20,7 +21,7 @@ class HL_FSCAV_REAL_TIME:
         #Definition of app window.
         self.master = tk.Tk()
         self.master.title('FSCAV Real Time')
-        self.master.geometry("700x600")
+        self.master.geometry("1000x600")
         self.master.configure(bg='gray')
         #Parameters
         self.path = ''
@@ -29,7 +30,7 @@ class HL_FSCAV_REAL_TIME:
         self.second_integration_point_array = []
         self.charge_array = []
         self.exponential_fit_charge_array = []
-        self.exponential_fit_parameters = (0.5, 0.1, 0.0002)
+        self.exponential_fit_parameters = (0.05, 0.1, 0.0002)
         self.response_time = []
         self.rmse_fitting = None
         self.samples_array = []
@@ -50,7 +51,8 @@ class HL_FSCAV_REAL_TIME:
         self.control_frame.grid(row=1, padx=10, pady=10)
         self.graph_frame = tk.Frame(self.master,  bg='gray')
         self.graph_frame.grid(row=1, padx=10, pady=10)
-
+        self.right_frame = tk.Frame(self.master, bg='gray')
+        self.right_frame.grid(row=0, column=3, padx=10, pady=10)
         tk.Label(self.input_frame, text="Inputs", font=(None, 15), anchor="e", bg='gray').grid(row=0, columnspan=2)
         self.path_input = self.get_input_object(self.input_frame, 'Path', 'gray', [1,0,1,1,0,0], [1,1,1,1,0,0], '\ ')
         self.first_integration_point_input = self.get_input_object(self.input_frame, 'Sample 1', 'gray', [2,0,1,1,0,0], [2,1,1,1,0,0], '60')
@@ -72,6 +74,15 @@ class HL_FSCAV_REAL_TIME:
         self.auto_button = tk.Checkbutton(self.control_frame, text="Auto", variable = self.auto_variable)
         self.auto_button.grid(row=7, column=3, rowspan=1, columnspan=2)
 
+        self.response_time_button = self.get_button_object(self.right_frame, self.response_time_button_pushed, 2, 15, 'Calc. response time', [0,0,1,1,10,10])
+        self.response_time_label_variable = tk.StringVar()
+        self.response_time_label = tk.Label(self.right_frame, text=" ", bg="gray", textvariable = self.response_time_label_variable)
+        self.response_time_label.grid(row=0, column=1)
+
+        self.k_input = self.get_input_object(self.right_frame, 'k', 'gray', [2,0,1,1,0,0], [2,1,1,1,0,0], '0.05')
+        self.c0_input  = self.get_input_object(self.right_frame, 'c0', 'gray', [3,0,1,1,0,0], [3,1,1,1,0,0], '0.1')
+        self.base_input = self.get_input_object(self.right_frame, 'b', 'gray', [4,0,1,1,0,0], [4,1,1,1,0,0], '0.0002')
+
         self.list_of_files_box = tk.Listbox(self.control_frame, bg="white")
         self.list_of_files_box.grid(row=8, column=0, columnspan=5, rowspan=3)
 
@@ -80,10 +91,15 @@ class HL_FSCAV_REAL_TIME:
 
         #Menu
         self.menubar = tk.Menu(self.master)
+
         self.filemenu = tk.Menu(self.menubar, tearoff=0)
         self.filemenu.add_command(label="Reset Application", command=self.reset_application)
         self.filemenu.add_command(label="Exit", command=self.master.destroy)
+
+        self.edit = tk.Menu(self.menubar, tearoff = 0)
+
         self.menubar.add_cascade(label="File", menu=self.filemenu)
+        self.menubar.add_cascade(label = 'Edit', menu=self.edit)
         self.master.config(menu=self.menubar)
 
     def get_input_object(self, macro, label_name, color, label_position, input_position, default_value):
@@ -269,21 +285,33 @@ class HL_FSCAV_REAL_TIME:
         self.cvs_figure[4].draw()
         self.cvs_figure[4].flush_events()
 
-    def get_exponential_fitting(self):
+    def response_time_button_pushed(self):
+        self.get_exponential_fitting()
+        self.update_response_time()
 
+
+    def get_exponential_fitting(self):
+        self.exponential_fit_parameters = (float(self.k_input.get()), float(self.c0_input.get()), float(self.base_input.get()))
         try:
-            params, cv = scipy.optimize.curve_fit(self.mono_exp, self.samples_array, self.charge_array, self.exponential_fit_parameters)
+            params, cv = curve_fit(self.mono_exp, np.array(self.samples_array), self.charge_array, self.exponential_fit_parameters)
             self.exponential_fit_parameters = params
-            self.exponential_fit_charge_array = self.mono_exp(self.samples_array, params[0], params[1], params[3])
+            self.exponential_fit_charge_array = self.mono_exp(np.array(self.samples_array), params[0], params[1], params[2])
             self.rmse_fitting =  np.sqrt(np.mean((self.charge_array-self.exponential_fit_charge_array)**2))
             self.response_time = 3/params[0]
-    except:
-        self.exponential_fit_parameters=(None,None,None)
-        self.rmse_fitting=None
-        self.response_time=None
+        except:
+            params, cv = curve_fit(self.mono_exp, np.array(self.samples_array), self.charge_array, self.exponential_fit_parameters)
+            self.exponential_fit_parameters = params
+            self.exponential_fit_charge_array = self.mono_exp(np.array(self.samples_array), params[0], params[1], params[2])
+            self.rmse_fitting =  np.sqrt(np.mean((self.charge_array-self.exponential_fit_charge_array)**2))
+            self.response_time = 3/params[0]
+            # self.exponential_fit_parameters=(None,None,None)
+            # self.rmse_fitting = None
+            # self.response_time = None
     #Define exponential function.
-    def mono_exp(t, k, c0, base):
-        return c0 * np.exp(-t * k)+base
+    def update_response_time(self):
+        self.response_time_label_variable.set("{:.2f}".format(self.response_time)+' min')
+    def mono_exp(self, t, k, c0, base):
+        return c0 * np.exp(-t * k) + base
 
 
     def reset_application(self):
