@@ -4,7 +4,7 @@ block_cipher = None
 
 
 a = Analysis(['main.py'],
-             pathex=['C:\\Users\\sergi\\OneDrive\\Escritorio\\FSCAV Real-time Reading'],
+             pathex=['C:\\Users\\sergi\\OneDrive - Imperial College London\\Files\\Code Files\\Applications\\FSCAV Real-time Reading'],
              binaries=[],
              datas=[],
              hiddenimports=[],

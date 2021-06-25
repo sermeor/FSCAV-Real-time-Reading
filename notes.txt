@@ -1,1 +1,1 @@
-python -m PyInstaller  --onefile --noconsole --icon=HL_Icon.ico main.py
+python -m PyInstaller  --onefile --noconsole --icon=cv.ico main.py

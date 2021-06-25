@@ -11,7 +11,7 @@ from scipy.integrate import simps
 
 def start_application():
     global read_real_time
-    read_real_time = read_real_time = HL_FSCAV_REAL_TIME()
+    read_real_time = HL_FSCAV_REAL_TIME()
     read_real_time.master.mainloop()
 
 
@@ -28,6 +28,10 @@ class HL_FSCAV_REAL_TIME:
         self.first_integration_point_array = []
         self.second_integration_point_array = []
         self.charge_array = []
+        self.exponential_fit_charge_array = []
+        self.exponential_fit_parameters = (0.5, 0.1, 0.0002)
+        self.response_time = []
+        self.rmse_fitting = None
         self.samples_array = []
         self.cvs_array = []
         self.time_array = []
@@ -256,8 +260,6 @@ class HL_FSCAV_REAL_TIME:
         self.graph_cv()
         self.file_label.config(text=self.cv_graph_index)
 
-
-
     def graph_cv(self):
         self.cvs_figure[2][0].set_data(self.time_array, self.cvs_array[self.cv_graph_index])
         self.cvs_figure[3][0].set_data([self.time_array[self.first_integration_point_array[self.cv_graph_index]], self.time_array[self.second_integration_point_array[self.cv_graph_index]]],
@@ -266,6 +268,23 @@ class HL_FSCAV_REAL_TIME:
         self.cvs_figure[1].autoscale_view()
         self.cvs_figure[4].draw()
         self.cvs_figure[4].flush_events()
+
+    def get_exponential_fitting(self):
+
+        try:
+            params, cv = scipy.optimize.curve_fit(self.mono_exp, self.samples_array, self.charge_array, self.exponential_fit_parameters)
+            self.exponential_fit_parameters = params
+            self.exponential_fit_charge_array = self.mono_exp(self.samples_array, params[0], params[1], params[3])
+            self.rmse_fitting =  np.sqrt(np.mean((self.charge_array-self.exponential_fit_charge_array)**2))
+            self.response_time = 3/params[0]
+    except:
+        self.exponential_fit_parameters=(None,None,None)
+        self.rmse_fitting=None
+        self.response_time=None
+    #Define exponential function.
+    def mono_exp(t, k, c0, base):
+        return c0 * np.exp(-t * k)+base
+
 
     def reset_application(self):
         self.master.destroy()
